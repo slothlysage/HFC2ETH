@@ -4,15 +4,15 @@ pull eth->$ spot price
 display exchange rate
 
 input username, wallet address, amount in ETH or HFC
-log tx
-contruct contract tx
-send tx to metamask for signing
+log trx
+contruct contract trx
+send trx to metamask for signing
 
 contract json example:
 {
-	type: HFC,
+	currency: HFC,
 	amount: 100,
-	txid: "0x..."
+	trxid: "0x..."
 	user: {
 		userID: "seanjones2848",
 		wallet: "0x..."
@@ -29,10 +29,9 @@ domain separator:
 }
 
 next:
-	- write solidity signing verification
 	- get multisig salt
-	- create txids usefully
-		- get last tx?
+	- create trxids usefully
+		- get last trx?
 		- hash of current data + nonse?
 	- write user data gathering bindings
 	- test signing function
@@ -51,10 +50,10 @@ var web3_bindings = (function() {
 		{ name: "salt", type: "bytes32" },
 	];
 
-	const tx = [
-		{ name: "type", type: "string" },
+	const trx = [
+		{ name: "currency", type: "string" },
 		{ name: "amount", type: "uint256" },
-		{ name: "txid", type: "uint256" },
+		{ name: "trxid", type: "uint256" },
 		{ name: "user", type: "Identity" },
 	],
 
@@ -75,17 +74,18 @@ var web3_bindings = (function() {
 		salt: ""
 	};
 
-	function signTx(type, amount, userId, wallet) {
+	// function to package the transaction for sending
+	function packTrx(currency, amount, userId, wallet) {
 
-		// txid created for audit purposes
-		//!!!NEED TO CREATE TXID CREATION FUNCTION
-		var txid = newtxidfunction();
+		// trxid created for audit purposes
+		//!!!NEED TO CREATE TRXID CREATION FUNCTION
+		var trxid = newtrxidfunction();
 
 		// setup message filled in via user input
 		var message = {
-			type: type,
-			amount: amout,
-			txid: txid,
+			currency: currency,
+			amount: amount,
+			trxid: trxid,
 			user: {
 				userId: userId,
 				wallet: wallet
@@ -93,29 +93,29 @@ var web3_bindings = (function() {
 		};
 
 		// layout of the variables
-		const data = JSON.stringify({
+		const trx = JSON.stringify({
 			types: {
 				EIP712Domain: domain,
-				Tx: tx,
+				Trx: trx,
 				Identity: identity,
 			},
 			domain: domainData,
-			primaryType: "Tx",
+			primaryType: "Trx",
 			message: message
 		});
 
-		return data;
+		return trx;
 	}
 
-	function sendTx(data) = {
+	// signing and sending the trx off to the ethereum chain
+	// gets signature in form of r, s, v
+	// need to double-check eth_signedTypedData_v3 if still valid
+	function sendTrx(trx) {
 
-		// signing and sending the tx off to the ethereum chain
-		// gets signature in form of r, s, v
-		// need to double-check eth_signedTypedData_v3 if still valid
 		web3.currentProvider.sendAsync(
 			{
 				method: "eth_signedTypedData_v3",
-				params: [signer, data],
+				params: [signer, trx],
 				from: signer
 			},
 			function(err, result) {
@@ -124,10 +124,16 @@ var web3_bindings = (function() {
 				}
 				const signature = result.result.substring(2);
 				const r = "0x" + signature.substring(0, 64);
-				const s = "0x" signature.substring(64, 128);
+				const s = "0x" + signature.substring(64, 128);
 				const v = parseInt(signature.substring(128, 130), 16);
 			}
 		);
+	};
+
+	// function to log the trx for auditing purposes
+	function logTrx(trx) {
+		// need to find out what databases we have to log this to
+		// can use a local DB for testing
 	};
 
 	// need to write useful public functions for getting user data
