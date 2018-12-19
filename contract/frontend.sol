@@ -16,9 +16,11 @@ Functions:
 ********************************************/
 
 //!!! Need to find right pragma
-pragma solidity ^0.4.xx;
+pragma solidity ^0.4.24;
 
-contract FrontEnd {
+import "./ownable.sol";
+
+contract FrontEnd is Ownable {
 
     // setup the types for the message for hashing
     struct Identity {
@@ -42,7 +44,8 @@ contract FrontEnd {
     // need to get salt from multi-sig
     bytes32 constant salt = ;
     string private constant EIP712_DOMAIN = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)";
-    bytes32 private constant DOMAIN_SEPARATOR = keccak256(abi.encode(
+    bytes32 private constant DOMAIN_SEPARATOR = keccak256(
+        abi.encode(
         EIP712_DOMAIN_TYPEHASH,
         keccak256("HFC2ETH"),
         keccak256("1"),
@@ -53,17 +56,20 @@ contract FrontEnd {
 
     // hash function for each message data type
     function hashIdentity(Identity identity) private pure returns (bytes32) {
-        return keccak256(abi.encode(
+        return keccak256(
+            abi.encode(
             IDENTITY_TYPEHASH,
             identity.userId,
             identity.wallet
         ));
     }
     function hashTrx(Trx memory trx) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(
+        return keccak256(
+            abi.encodePacked(
             "\\x19\\x01",
             DOMAIN_SEPARATOR,
-            keccak256(abi.encode(
+            keccak256(
+                abi.encode(
                 TRX_TYPEHASH,
                 keccak256(trx.currency),
                 trx.amount,
