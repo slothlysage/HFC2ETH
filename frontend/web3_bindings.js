@@ -38,7 +38,7 @@ next:
 
 ***************************************************************************/
 
-var web3_bindings = (function() {
+(function() {
 
 	// datatypes
 	// can stay in this scope
@@ -55,7 +55,7 @@ var web3_bindings = (function() {
 		{ name: "amount", type: "uint256" },
 		{ name: "trxid", type: "uint256" },
 		{ name: "user", type: "Identity" },
-	],
+	];
 
 	const identity = [
 		{ name: "userID", type: "string" },
@@ -74,6 +74,8 @@ var web3_bindings = (function() {
 		salt: ""
 	};
 
+	// placeholdervar for global exchange rate
+	var rate = 0;
 	// function to package the transaction for sending
 	function packTrx(currency, amount, userId, wallet) {
 
@@ -136,12 +138,26 @@ var web3_bindings = (function() {
 		// can use a local DB for testing
 	};
 
+	// function used to get exchange rate using promises
+	function getExchangeRate() {
+		const Url = 'https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH';
+		
+		fetch(Url)
+		.then(data=>{return data.json()})
+		.then(function(res) {
+			console.log(res);
+			rate = res.ETH / 100;
+			document.getElementById("xchangeRate").innerText = rate.toString();
+			return rate;
+		});
+	};
+
 	// need to write useful public functions for getting user data
 	return {
-		signing2ETH: function() {
-		},
-		showInfo: function(component) {
+		showExchangeRate() {
+			getExchangeRate();
 		}
+
 	}
 
 })();
