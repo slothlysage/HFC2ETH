@@ -3,17 +3,29 @@
     <meta charset="UTF-8">
 	<script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.0.0-beta.36/dist/web3.min.js" integrity="sha256-nWBTbvxhJgjslRyuAKJHK+XcZPlCnmIAAMixz6EefVk=" crossorigin="anonymous"></script>
 	<script scr="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script type="text/javascript" src="web3_bindings.js"></script>
+    <script src="simpleABI.js"></script>
+    <script src="web3_bindings.js"></script>
 </head>
 <body>
-    <h1>This is the ETH to HFC echange</h1>
+    <h1>
+        This is the HFC to ETH exchange
+    </h1><br>
     <div>
-        <button onClick="showExchangeRate()">
-            Click for HFC-ETH rate
-        </button>
-        <div id=xchangeRate>
-            Floop placeholder
+        <h2>
+            User Input
+        </h2><br>
+        <div>
+            UserID: <input type="text" id="userId"><br>
+            Wallet: <input type="text" id="wallet"><br>
+            Amount: <input type="number" id="amount" min="0" max="1000"><br>
+            <input type="button" value="Submit" onclick="wb.submitTrx()">
+        </div><br><br>
+        <div>
+            <input type="button" value="Audit" onclick="wb.fullAudit()">
+        </div><br>
+        <div>
+            <input type="button" value="Withdraw" onclick="wb.withdraw()">
         </div>
-    <div>
+    </div>
 </body>
 </html>

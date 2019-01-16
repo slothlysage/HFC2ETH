@@ -1,141 +1,65 @@
-/***************************************************************************
+/*
+ *	These are the binding for interacting with the simple contract
+ *
+ *
+*/
 
-pull eth->$ spot price
-display exchange rate
+//wrapped in scope to have private functions
+var wb = (function() {
 
-input username, wallet address, amount in ETH or HFC
-log trx
-contruct contract trx
-send trx to metamask for signing
+	// address of owner
+	var owner = "0x6EE490Da93d5baA3828fb6BF2a004d085EEb93Cf"
 
-contract json example:
-{
-	currency: HFC,
-	amount: 100,
-	trxid: "0x..."
-	user: {
-		userID: "seanjones2848",
-		wallet: "0x..."
+	// setup web3js so it is usable
+	if (typeof web3 !== 'undefined') {
+		web3 = new Web3(web3.currentProvider);
+	} else {
+		web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 	}
-}
 
-domain separator:
-{
-	name: "HFC2ETH",
-	version: "1",
-	chainID: "1",
-	verifyingContract: "0x...",
-	salt: "0x..."
-}
-
-next:
-	- get multisig salt
-	- create trxids usefully
-		- get last trx?
-		- hash of current data + nonse?
-	- write user data gathering bindings
-	- test signing function
-
-***************************************************************************/
-
-(function() {
-
-	// datatypes
-	// can stay in this scope
-	const domain = [
-		{ name: "name", type: "string" },
-		{ name: "version", type: "string"},
-		{ name: "chainID", type: "uint256"},
-		{ name: "verifyingContract", type: "address" },
-		{ name: "salt", type: "bytes32" },
-	];
-
-	const trx = [
-		{ name: "currency", type: "string" },
-		{ name: "amount", type: "uint256" },
-		{ name: "trxid", type: "uint256" },
-		{ name: "user", type: "Identity" },
-	];
-
-	const identity = [
-		{ name: "userID", type: "string" },
-		{ name: "wallet", type: "address" },
-	];
-
-	// domain separator need to put in verifying contract
-	// can stay in this scope
-	//!!! NEEDS CONTRACT VALUE
-	//!!! NEEDS MULTISIG SALT
-	const domainData = {
-		name: "HFC2ETH",
-		version: "1",
-		chainID: parseInt(web3.version.network, 10),
-		verifyingContract: "",
-		salt: ""
-	};
+	// setup contract to be used
+	var simpleContractAddress = "0xa04f88823ce2d0c1396d2534ffbe43dbba19d73e"
+	var simpleContract = new web3.eth.Contract(simpleABI, simpleContractAddress);
 
 	// placeholdervar for global exchange rate
 	var rate = 0;
-	// function to package the transaction for sending
-	function packTrx(currency, amount, userId, wallet) {
 
-		// trxid created for audit purposes
-		//!!!NEED TO CREATE TRXID CREATION FUNCTION
-		var trxid = newtrxidfunction();
+	// for gathering the form information submitted
+	function getFormInfo() {
+		var info = {};
 
-		// setup message filled in via user input
-		var message = {
-			currency: currency,
-			amount: amount,
-			trxid: trxid,
-			user: {
-				userId: userId,
-				wallet: wallet
-			}
-		};
+		info.currency = "HFC";
+		info.amount = (document.getElementById("amount").value * 1000000000000000000);
+		info.userId = document.getElementById("userId").value;
+		info.wallet = document.getElementById("wallet").value;
 
-		// layout of the variables
-		const trx = JSON.stringify({
-			types: {
-				EIP712Domain: domain,
-				Trx: trx,
-				Identity: identity,
-			},
-			domain: domainData,
-			primaryType: "Trx",
-			message: message
-		});
-
-		return trx;
+		return info;
 	}
 
-	// signing and sending the trx off to the ethereum chain
-	// gets signature in form of r, s, v
-	// need to double-check eth_signedTypedData_v3 if still valid
-	function sendTrx(trx) {
-
-		web3.currentProvider.sendAsync(
-			{
-				method: "eth_signedTypedData_v3",
-				params: [signer, trx],
-				from: signer
-			},
-			function(err, result) {
-				if (err) {
-					return console.error(err);
-				}
-				const signature = result.result.substring(2);
-				const r = "0x" + signature.substring(0, 64);
-				const s = "0x" + signature.substring(64, 128);
-				const v = parseInt(signature.substring(128, 130), 16);
+	// gather wallet info from web3 0-9
+	function getAccount(num) {
+		web3.eth.getAccounts(function (err, accounts) {
+			if (!accounts || err) {
+				console.log(err);
+				return
 			}
-		);
-	};
+			return accounts[num];
+		})
+	}
 
-	// function to log the trx for auditing purposes
-	function logTrx(trx) {
-		// need to find out what databases we have to log this to
-		// can use a local DB for testing
+	// using new web3js bindings.
+	function sendTrx(info) {
+		Promise.resolve(getExchangeRate())
+		.then(() => {
+			var exRate = web3.utils.toHex(new web3.utils.BN(rate.toString()));
+			var amount = web3.utils.toHex(new web3.utils.BN(info.amount.toString()));
+			var time = (new Date).getTime();
+			time = web3.utils.toHex(new web3.utils.BN(time.toString()));
+			simpleContract.methods.recieveTrx(info.userId, exRate, time)
+			.send({from: info.wallet, value: amount, gas: 300000}, function(error, hash) {
+				console.log(error, hash);
+			});
+		})	
 	};
 
 	// function used to get exchange rate using promises
@@ -146,18 +70,34 @@ next:
 		.then(data=>{return data.json()})
 		.then(function(res) {
 			console.log(res);
-			rate = res.ETH / 100;
-			document.getElementById("xchangeRate").innerText = rate.toString();
+			rate = Math.round(res.ETH * 10000000000000000);
 			return rate;
 		});
 	};
 
-	// need to write useful public functions for getting user data
-	return {
-		showExchangeRate() {
-			getExchangeRate();
-		}
-
+	function auditToGoogle() {
+		console.log(simpleContract.methods.trxIdAudit().call({from : owner}));
+		console.log(simpleContract.methods.userIdAudit().call({from : owner}));
+		console.log(simpleContract.methods.amountAudit().call({from : owner}));
+		console.log(simpleContract.methods.exchangeAudit().call({from : owner}));
+		console.log(simpleContract.methods.timeAudit().call({from : owner}));
+		console.log(simpleContract.methods.addressAudit().call({from : owner}));
 	}
 
+	// need to write useful public functions for getting user data
+	return {
+		showExchangeRate : function() {
+			getExchangeRate();
+		},
+		submitTrx : function() {
+			var info = getFormInfo();
+			sendTrx(info);
+		},
+		fullAudit : function() {
+			auditToGoogle();
+		},
+		withdraw : function() {
+			console.log(simpleContract.methods.withdrawETH().send({from : owner, gas: 300000}));
+		}
+	};
 })();
