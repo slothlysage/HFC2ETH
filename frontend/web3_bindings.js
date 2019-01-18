@@ -8,6 +8,7 @@
 var wb = (function() {
 
 	// address of owner
+	// will need a more secure way to store this durring production
 	var owner = "0x6EE490Da93d5baA3828fb6BF2a004d085EEb93Cf"
 
 	// setup web3js so it is usable
@@ -18,7 +19,8 @@ var wb = (function() {
 	}
 
 	// setup contract to be used
-	var simpleContractAddress = "0x4230f68bdb7ae8f11a337a082f789d73cdef008c"
+	// will need to be updated to contract released to main net
+	var simpleContractAddress = "0x69d220926986d15070f2767f87d1b6521cda59d7"
 	var simpleContract = new web3.eth.Contract(simpleABI, simpleContractAddress);
 
 	// for gathering the form information submitted
@@ -34,6 +36,7 @@ var wb = (function() {
 	}
 
 	// gather wallet info from web3 0-9
+	// used for testing on the truffle rpc, not used for production
 	function getAccount(num) {
 		web3.eth.getAccounts(function (err, accounts) {
 			if (!accounts || err) {
@@ -44,7 +47,9 @@ var wb = (function() {
 		})
 	}
 
-	// using new web3js bindings.
+	// grabs exchange rate
+	// then packages info from user input along with exchange rate to
+	// send to simple contract
 	function sendTrx(info) {
 		getExchangeRate()
 		.then((rate) => {
@@ -75,7 +80,6 @@ var wb = (function() {
 		});
 	}
 		
-
 	// used to log audits to google sheets
 	// using cors-anywhere as a stop-gap measure not to be used in production
 	// first sends request to google for the last transaction logged
@@ -93,7 +97,8 @@ var wb = (function() {
 		})).then(res => console.log(res))
 	}
 
-	// get all data from contract via promise
+	// get all data from contract via promises as a promise
+	// can only be called by owner of the contract
 	let getFullAudit = () => {
 		return new Promise((resolve, reject) => {
 			Promise.all([
@@ -108,7 +113,7 @@ var wb = (function() {
 		})
 	}
 
-	// get the transactions not logged yet
+	// get the transactions not logged yet in google sheets
 	let getLatestAudit = (last) => {
 		return new Promise((resolve, reject) => {
 			getFullAudit().then(function(audit) {
@@ -130,10 +135,13 @@ var wb = (function() {
 		})
 	}
 
+	// user name needs to be chooped into two hex byte32s to be passed out of solidity
+	// this function recovers them
 	function recoverUserID(hex1, hex2) {
 		return(hex2a(hex1) + hex2a(hex2));
 	}
 
+	// convert hex back to ascii, and not using first two chars '0x'
 	function hex2a(hex) {
 		var hex = hex.toString();
 		var str = '';
@@ -141,11 +149,10 @@ var wb = (function() {
 			str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
 		return str;
 	}
-	// need to write useful public functions for getting user data
+
+	// functions accessable via html
+	// will need to put full audit and withdraw behind admin barriers
 	return {
-		showExchangeRate : function() {
-			getExchangeRate();
-		},
 		submitTrx : function() {
 			var info = getFormInfo();
 			sendTrx(info);

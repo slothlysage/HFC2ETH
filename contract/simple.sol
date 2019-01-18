@@ -19,13 +19,16 @@ contract Simple {
         return msg.sender == _owner;
     }
 
+    // modifier to ensure only owner can run functions
     modifier onlyOwner() {
         assert(isOwner());
         _;
     }
 
+    // event fired off in case of oracle
     event NewTransaction(uint256 trxId, string userId, uint256 exchangeRate, uint256 amountHFC, uint256 timeStamp);
     
+    // struct used to keep track of transactions
     struct Transaction {
         string userId;
         uint256 exchangeRate;
@@ -34,28 +37,20 @@ contract Simple {
         address wallet;
     }
     
-    mapping (uint256 => address) transactionsToSender;
-    mapping (address => uint256) userTransactionsCount;
-    mapping (string => address[]) userToAddress;
+    // an array of all transactions that have occured
+    Transaction[] _transactions;
 
-    Transaction[] public _transactions;
-    
+    // function to reviece a transaction and log it
+    // costs gas
     function recieveTrx(string _userId, uint256 _exchangeRate, uint256 _timeStamp) external payable {
         uint256 trxId = _transactions.push(Transaction(_userId, _exchangeRate, msg.value, _timeStamp, msg.sender)) - 1;
-        transactionsToSender[trxId] = msg.sender;
-        userTransactionsCount[msg.sender] += 1;
-        uint newFlag = 1;
-        for (uint i = 0; i < userToAddress[_userId].length; i++) {
-            if (msg.sender == userToAddress[_userId][i]) {
-                newFlag = 0;
-            }
-        }
-        if (newFlag == 1) {
-            userToAddress[_userId].push(msg.sender);
-        }
         emit NewTransaction(trxId, _userId, _exchangeRate, msg.value, _timeStamp);
     }
 
+    // a function to chop up a string into two byte32s
+    // used to pass out userIds from the contract
+    // uses assembly for ease
+    // free
     function _stringToBytes(string memory s) internal pure returns (bytes32, bytes32){
         bytes memory temp = bytes(s);
         bytes32 p1 = 0x0;
@@ -77,15 +72,24 @@ contract Simple {
         return (p1, p2);
     }
 
+    // function to see how much ETH is in this contract
+    // only used by owner
+    // free
     function viewBalance() external view onlyOwner returns (uint256) {
         return address(this).balance;
     }
 
+    // used to withdraw all ether from this contract
+    // can only be used by owner
+    // costs gas
     function withdrawETH() external onlyOwner {
         uint256 amount = address(this).balance;
         _owner.transfer(amount);
     }
     
+    // audit addresses in transactions in order of occurance
+    // can only be used by owner
+    // free
     function addressAudit() external view onlyOwner returns (address[]) {
         address[] memory addresses = new address[](_transactions.length);
         for (uint256 i = 0; i < _transactions.length; i++) {
@@ -93,7 +97,11 @@ contract Simple {
         }
         return (addresses);
     }
-    
+
+    // audit userIds in transactions in order of occurance
+    // returns two byte32 arrays, needs to be recombined after reciept
+    // can only be used by owner
+    // free
     function userIdAudit() external view onlyOwner returns (bytes32[], bytes32[]) {
         bytes32[] memory userIdp1 = new bytes32[](_transactions.length);
         bytes32[] memory userIdp2 = new bytes32[](_transactions.length);
@@ -103,7 +111,10 @@ contract Simple {
         return (userIdp1, userIdp2);
         
     }
-    
+
+    // audit amouts paid in Wei in transactions in order of occurance
+    // can only be used by owner
+    // free
     function amountAudit() external view onlyOwner returns (uint256[]) {
         uint256[] memory amounts = new uint256[](_transactions.length);
         for (uint256 i = 0; i < _transactions.length; i++) {
@@ -111,7 +122,10 @@ contract Simple {
         }
         return (amounts);
     }
-    
+
+    // audit exchange rates in Wei/HFC in transactions in order of occurance
+    // can only be used by owner
+    // free
     function exchangeAudit() external view onlyOwner returns (uint256[]) {
         uint256[] memory exchanges = new uint256[](_transactions.length);
         for (uint256 i = 0; i < _transactions.length; i++) {
@@ -119,7 +133,10 @@ contract Simple {
         }
         return (exchanges);
     }
-    
+
+    // audit epoch time stamps in transactions in order of occurance
+    // can only be used by owner
+    // free
     function timeAudit() external view onlyOwner returns (uint256[]) {
         uint256[] memory times = new uint256[](_transactions.length);
         for (uint256 i = 0; i < _transactions.length; i++) {
@@ -128,6 +145,9 @@ contract Simple {
         return (times);
     }
 
+    // audit transaction IDs in transactions in order of occurance
+    // can only be used by owner
+    // free
     function trxIdAudit() external view onlyOwner returns (uint256[]) {
         uint256[] memory trxIds = new uint256[](_transactions.length);
         for (uint256 i = 0; i < _transactions.length; i++) {
