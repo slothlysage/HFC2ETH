@@ -75,15 +75,71 @@ var wb = (function() {
 		});
 	};
 
+	// used to log audits to google sheets
+	// using cors-anywhere as a stop-gap measure not to be used in production
+	// first sends request to google for the last transaction logged
+	// then grabs all transactions and truncated to the latest unlogged ones
+	// last send off package to google sheets to update
 	function auditToGoogle() {
-		console.log(simpleContract.methods.trxIdAudit().call({from : owner}));
-		console.log(simpleContract.methods.userIdAudit().call({from : owner}));
-		console.log(simpleContract.methods.amountAudit().call({from : owner}));
-		console.log(simpleContract.methods.exchangeAudit().call({from : owner}));
-		console.log(simpleContract.methods.timeAudit().call({from : owner}));
-		console.log(simpleContract.methods.addressAudit().call({from : owner}));
+		const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbwGHKmPtp7L6mjXZq_1uGys-ig1B4PKnUIjia2rdtTNuRebiPiZ/exec"
+		fetch(url + "?type=last", {
+			method: 'GET'
+		}).then(res => res.json())
+		.then(last => getLatestAudit(last))
+		.then(latest => fetch(url, {
+			method: 'POST',
+			body: JSON.stringify(latest)
+		})).then(res => console.log(res))
 	}
 
+	// get all data from contract via promise
+	let getFullAudit = () => {
+		return new Promise((resolve, reject) => {
+			Promise.all([
+				simpleContract.methods.trxIdAudit().call({from : owner}),
+				simpleContract.methods.userIdAudit().call({from : owner}),
+				simpleContract.methods.amountAudit().call({from : owner}),
+				simpleContract.methods.exchangeAudit().call({from : owner}),
+				simpleContract.methods.timeAudit().call({from : owner}),
+				simpleContract.methods.addressAudit().call({from : owner})
+			]).then(values => resolve(values))
+			.catch(error => reject(error))
+		})
+	}
+
+	// get the transactions not logged yet
+	let getLatestAudit = (last) => {
+		return new Promise((resolve, reject) => {
+			getFullAudit().then(function(audit) {
+				hex1 = audit[1][0];
+				hex2 = audit[1][1];
+				var jsonPackage = {};
+				for (i = last; i < audit[0].length; i++) {
+					jsonPackage[i] = [
+						recoverUserID(hex1[i], hex2[i]),
+						audit[2][i],
+						audit[3][i],
+						audit[4][i],
+						audit[5][i]
+					]
+				}
+				console.log(jsonPackage);
+				resolve(jsonPackage);
+			}).catch(error => reject(error));	
+		})
+	}
+
+	function recoverUserID(hex1, hex2) {
+		return(hex2a(hex1) + hex2a(hex2));
+	}
+
+	function hex2a(hex) {
+		var hex = hex.toString();
+		var str = '';
+		for (var i = 2; (i < hex.length && hex.substr(i, 2) !== '00'); i += 2)
+			str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+		return str;
+	}
 	// need to write useful public functions for getting user data
 	return {
 		showExchangeRate : function() {
