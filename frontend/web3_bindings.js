@@ -18,11 +18,8 @@ var wb = (function() {
 	}
 
 	// setup contract to be used
-	var simpleContractAddress = "0xa04f88823ce2d0c1396d2534ffbe43dbba19d73e"
+	var simpleContractAddress = "0x4230f68bdb7ae8f11a337a082f789d73cdef008c"
 	var simpleContract = new web3.eth.Contract(simpleABI, simpleContractAddress);
-
-	// placeholdervar for global exchange rate
-	var rate = 0;
 
 	// for gathering the form information submitted
 	function getFormInfo() {
@@ -49,8 +46,8 @@ var wb = (function() {
 
 	// using new web3js bindings.
 	function sendTrx(info) {
-		Promise.resolve(getExchangeRate())
-		.then(() => {
+		getExchangeRate()
+		.then((rate) => {
 			var exRate = web3.utils.toHex(new web3.utils.BN(rate.toString()));
 			var amount = web3.utils.toHex(new web3.utils.BN(info.amount.toString()));
 			var time = (new Date).getTime();
@@ -63,17 +60,21 @@ var wb = (function() {
 	};
 
 	// function used to get exchange rate using promises
-	function getExchangeRate() {
-		const Url = 'https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH';
+	let getExchangeRate = () => {
+		return new Promise((resolve,reject) => {
+			const Url = 'https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH';
 		
-		fetch(Url)
-		.then(data=>{return data.json()})
-		.then(function(res) {
+			fetch(Url)
+			.then(data => {return data.json()})
+			.catch(error => reject(error))
+			.then(function(res) {
 			console.log(res);
 			rate = Math.round(res.ETH * 10000000000000000);
-			return rate;
+			resolve(rate);
+			})
 		});
-	};
+	}
+		
 
 	// used to log audits to google sheets
 	// using cors-anywhere as a stop-gap measure not to be used in production
@@ -85,7 +86,7 @@ var wb = (function() {
 		fetch(url + "?type=last", {
 			method: 'GET'
 		}).then(res => res.json())
-		.then(last => getLatestAudit(last))
+		.then(last => getLatestAudit(last - 1))
 		.then(latest => fetch(url, {
 			method: 'POST',
 			body: JSON.stringify(latest)
@@ -153,7 +154,8 @@ var wb = (function() {
 			auditToGoogle();
 		},
 		withdraw : function() {
-			console.log(simpleContract.methods.withdrawETH().send({from : owner, gas: 300000}));
+			simpleContract.methods.withdrawETH().send({from : owner, gas: 300000})
+			.then(res => console.log(res));
 		}
 	};
 })();
