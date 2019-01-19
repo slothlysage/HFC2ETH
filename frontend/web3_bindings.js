@@ -47,21 +47,28 @@ var wb = (function() {
 		})
 	}
 
+	// bool that lets you send or not
+	var canSend = true;
+
 	// grabs exchange rate
 	// then packages info from user input along with exchange rate to
 	// send to simple contract
 	function sendTrx(info) {
-		getExchangeRate()
-		.then((rate) => {
-			var exRate = web3.utils.toHex(new web3.utils.BN(rate.toString()));
-			var amount = web3.utils.toHex(new web3.utils.BN(info.amount.toString()));
-			var time = (new Date).getTime();
-			time = web3.utils.toHex(new web3.utils.BN(time.toString()));
-			simpleContract.methods.recieveTrx(info.userId, exRate, time)
-			.send({from: info.wallet, value: amount, gas: 300000}, function(error, hash) {
-				console.log(error, hash);
-			});
-		})	
+		if (canSend == true) {
+			canSend = false;
+			getExchangeRate()
+			.then((rate) => {
+				var exRate = web3.utils.toHex(new web3.utils.BN(rate.toString()));
+				var amount = web3.utils.toHex(new web3.utils.BN(info.amount.toString()));
+				var time = (new Date).getTime();
+				time = web3.utils.toHex(new web3.utils.BN(time.toString()));
+				simpleContract.methods.recieveTrx(info.userId, exRate, time)
+				.send({from: info.wallet, value: amount, gas: 300000}, function(error, hash) {
+					console.log(error, hash);
+				}).then(() => {canSend = true;});
+			})
+		}
+			
 	};
 
 	// function used to get exchange rate using promises
@@ -79,22 +86,30 @@ var wb = (function() {
 			})
 		});
 	}
-		
+
+	// bool to let you audit or not
+	var canAudit = true;
+
 	// used to log audits to google sheets
 	// using cors-anywhere as a stop-gap measure not to be used in production
 	// first sends request to google for the last transaction logged
 	// then grabs all transactions and truncated to the latest unlogged ones
 	// last send off package to google sheets to update
 	function auditToGoogle() {
-		const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbwGHKmPtp7L6mjXZq_1uGys-ig1B4PKnUIjia2rdtTNuRebiPiZ/exec"
-		fetch(url + "?type=last", {
-			method: 'GET'
-		}).then(res => res.json())
-		.then(last => getLatestAudit(last - 1))
-		.then(latest => fetch(url, {
-			method: 'POST',
-			body: JSON.stringify(latest)
-		})).then(res => console.log(res))
+		if (canAudit == true) {
+			canAudit = false;
+			const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbwGHKmPtp7L6mjXZq_1uGys-ig1B4PKnUIjia2rdtTNuRebiPiZ/exec"
+			fetch(url + "?type=last", {
+				method: 'GET'
+			}).then(res => res.json())
+			.then(last => getLatestAudit(last - 1))
+			.then(latest => fetch(url, {
+				method: 'POST',
+				body: JSON.stringify(latest)
+			})).then(res => console.log(res))
+			.then(() => {canAudit = true;})
+		}
+		
 	}
 
 	// get all data from contract via promises as a promise
