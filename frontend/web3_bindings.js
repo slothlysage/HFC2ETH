@@ -20,7 +20,7 @@ var wb = (function() {
 
 	// setup contract to be used
 	// will need to be updated to contract released to main net
-	var simpleContractAddress = "0x69d220926986d15070f2767f87d1b6521cda59d7"
+	var simpleContractAddress = "0x682540487418efcd79e47fca40c711a3c2b05035"
 	var simpleContract = new web3.eth.Contract(simpleABI, simpleContractAddress);
 
 	// for gathering the form information submitted
@@ -177,6 +177,10 @@ var wb = (function() {
 		},
 		withdraw : function() {
 			simpleContract.methods.withdrawETH().send({from : owner, gas: 300000})
+			.then(res => console.log(res));
+		},
+		close : function() {
+			simpleContract.methods.close().send({from : owner, gas: 300000})
 			.then(res => console.log(res));
 		}
 	};

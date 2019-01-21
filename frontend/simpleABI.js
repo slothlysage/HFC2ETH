@@ -1,6 +1,15 @@
 var simpleABI = [
 	{
 		"constant": false,
+		"inputs": [],
+		"name": "close",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
 		"inputs": [
 			{
 				"name": "_userId",
@@ -67,41 +76,6 @@ var simpleABI = [
 		],
 		"name": "NewTransaction",
 		"type": "event"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "_transactions",
-		"outputs": [
-			{
-				"name": "userId",
-				"type": "string"
-			},
-			{
-				"name": "exchangeRate",
-				"type": "uint256"
-			},
-			{
-				"name": "amountWei",
-				"type": "uint256"
-			},
-			{
-				"name": "timeStamp",
-				"type": "uint256"
-			},
-			{
-				"name": "wallet",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
 	},
 	{
 		"constant": true,

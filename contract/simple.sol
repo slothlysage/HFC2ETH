@@ -155,4 +155,13 @@ contract Simple {
         }
         return (trxIds);
     }
+
+    // self destruct for taking out contract
+    // only use at last resort
+    // FUNDS SENT AFTER SELF DESTRUCT WILL BE LOST
+    // can only be used by owner
+    // negative gas cost
+    function close() external onlyOwner {
+        selfdestruct(_owner);
+    }
 }
