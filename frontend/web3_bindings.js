@@ -12,6 +12,7 @@ var wb = (function() {
 	var owner = "0x6EE490Da93d5baA3828fb6BF2a004d085EEb93Cf"
 
 	// setup web3js so it is usable
+	// might use different setup in production, instead of local host
 	if (typeof web3 !== 'undefined') {
 		web3 = new Web3(web3.currentProvider);
 	} else {
@@ -27,7 +28,6 @@ var wb = (function() {
 	function getFormInfo() {
 		var info = {};
 
-		info.currency = "HFC";
 		info.amount = (document.getElementById("amount").value * 1000000000000000000);
 		info.userId = document.getElementById("userId").value;
 		info.wallet = document.getElementById("wallet").value;
@@ -35,8 +35,25 @@ var wb = (function() {
 		return info;
 	}
 
-	// gather wallet info from web3 0-9
+	// validator checks userID regex and makes sure a wallet ID was used
+	function validateInfo(info) {
+		pattern = new RegExp("[a-zA-Z0-9_\\.]+")
+		for (var i = 0; i < info.userId.length; i++) {
+			if (!(pattern.test(info.userId[i]))) {
+				console.log("userID doesn't match regex");
+				return false;
+			}
+		}
+		if (!web3.utils.isAddress(info.wallet)) {
+			console.log("wallet is not an address");
+			return false;
+		}
+		return true;
+	}
+
+	// gather wallet info from test web3 wallet accounts 0-9
 	// used for testing on the truffle rpc, not used for production
+	/*
 	function getAccount(num) {
 		web3.eth.getAccounts(function (err, accounts) {
 			if (!accounts || err) {
@@ -46,6 +63,7 @@ var wb = (function() {
 			return accounts[num];
 		})
 	}
+	*/
 
 	// bool that lets you send or not
 	var canSend = true;
@@ -170,7 +188,11 @@ var wb = (function() {
 	return {
 		submitTrx : function() {
 			var info = getFormInfo();
-			sendTrx(info);
+			if (!validateInfo(info)) {
+				console.log("info malformed");
+			} else {
+				sendTrx(info);
+			}
 		},
 		fullAudit : function() {
 			auditToGoogle();
